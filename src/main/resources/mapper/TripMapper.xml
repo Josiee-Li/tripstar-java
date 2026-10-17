@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.josie.tripstar.mapper.TripMapper">
+    <insert id="insertPlan" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO trip_plan(public_id, user_id, title) VALUES(#{publicId}, #{userId}, #{title})
+    </insert>
+    <select id="findPlan" resultType="TripPlan">
+        SELECT * FROM trip_plan WHERE public_id = #{publicId} AND user_id = #{userId}
+    </select>
+    <select id="lockPlan" resultType="TripPlan">SELECT * FROM trip_plan WHERE id = #{id} FOR UPDATE</select>
+    <select id="history" resultType="TripPlan">
+        SELECT p.* FROM trip_plan p WHERE p.user_id = #{userId}
+        AND EXISTS(SELECT 1 FROM trip_plan_version v WHERE v.plan_id = p.id)
+        ORDER BY p.created_at DESC, p.id DESC LIMIT #{limit}
+    </select>
+    <insert id="insertTask" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO trip_task(public_id, plan_id, idempotency_key, request_json, message)
+        VALUES(#{publicId}, #{planId}, #{idempotencyKey}, #{requestJson}, '任务已提交，等待生成')
+    </insert>
+    <select id="taskByKey" resultType="TripTask">
+        SELECT * FROM trip_task WHERE plan_id = #{planId} AND idempotency_key = #{key}
+    </select>
+    <select id="findTask" resultType="TripTask">
+        SELECT t.* FROM trip_task t JOIN trip_plan p ON p.id = t.plan_id
+        WHERE t.public_id = #{publicId} AND p.user_id = #{userId}
+    </select>
+    <select id="taskById" resultType="TripTask">SELECT * FROM trip_task WHERE id = #{id}</select>
+    <select id="lockTask" resultType="TripTask">SELECT * FROM trip_task WHERE id = #{id} FOR UPDATE</select>
+    <update id="claimTask">
+        UPDATE trip_task SET stage = 'generating', progress = 10, message = '正在生成行程',
+            started_at = CURRENT_TIMESTAMP(3), updated_at = CURRENT_TIMESTAMP(3), lock_version = lock_version + 1
+        WHERE id = #{id} AND status = 'processing' AND stage = 'submitted'
+    </update>
+    <update id="progress">
+        UPDATE trip_task SET stage = 'saving', progress = 80, message = '正在校验并保存行程',
+            updated_at = CURRENT_TIMESTAMP(3), lock_version = lock_version + 1
+        WHERE id = #{id} AND status = 'processing'
+    </update>
+    <update id="completeTask">
+        UPDATE trip_task SET status = 'completed', stage = 'completed', progress = 100,
+            message = '旅行计划生成成功', finished_at = CURRENT_TIMESTAMP(3),
+            updated_at = CURRENT_TIMESTAMP(3), lock_version = lock_version + 1
+        WHERE id = #{id} AND status = 'processing'
+    </update>
+    <update id="failTask">
+        UPDATE trip_task SET status = 'failed', stage = 'failed', progress = 100,
+            message = #{message}, error_code = #{code}, error_message = #{message},
+            finished_at = CURRENT_TIMESTAMP(3), updated_at = CURRENT_TIMESTAMP(3), lock_version = lock_version + 1
+        WHERE id = #{id} AND status = 'processing'
+    </update>
+    <!-- 不在启动时一律置失败，避免多实例启动误伤其他实例的任务。 -->
+    <update id="expireTasks">
+        UPDATE trip_task SET status = 'failed', stage = 'failed', progress = 100,
+            message = '任务超时或服务中断，请使用新的幂等键重试', error_code = 'TASK_EXPIRED',
+            error_message = '任务超时或服务中断', finished_at = CURRENT_TIMESTAMP(3),
+            updated_at = CURRENT_TIMESTAMP(3), lock_version = lock_version + 1
+        WHERE status = 'processing' AND (
+            (started_at IS NOT NULL AND started_at &lt; TIMESTAMPADD(MINUTE, -10, CURRENT_TIMESTAMP(3)))
+            OR (started_at IS NULL AND created_at &lt; TIMESTAMPADD(HOUR, -1, CURRENT_TIMESTAMP(3))))
+    </update>
+    <select id="nextVersion" resultType="int">
+        SELECT COALESCE(MAX(version_no), 0) + 1 FROM trip_plan_version WHERE plan_id = #{planId}
+    </select>
+    <insert id="insertVersion" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO trip_plan_version(plan_id, task_id, version_no, main_city, start_date, end_date,
+            travel_days, language, total_budget, currency, plan_json, schema_version)
+        VALUES(#{planId}, #{taskId}, #{versionNo}, #{mainCity}, #{startDate}, #{endDate},
+            #{travelDays}, #{language}, #{totalBudget}, #{currency}, #{planJson}, 1)
+    </insert>
+    <select id="version" resultType="TripPlanVersion">
+        SELECT * FROM trip_plan_version WHERE plan_id = #{planId} AND version_no = #{versionNo}
+    </select>
+    <select id="versionByTask" resultType="TripPlanVersion">SELECT * FROM trip_plan_version WHERE task_id = #{taskId}</select>
+    <select id="versionById" resultType="TripPlanVersion">SELECT * FROM trip_plan_version WHERE id = #{id}</select>
+    <select id="versions" resultType="TripPlanVersion">
+        SELECT * FROM trip_plan_version WHERE plan_id = #{planId} ORDER BY version_no DESC LIMIT 100
+    </select>
+    <select id="findPlanById" resultType="TripPlan">SELECT * FROM trip_plan WHERE id = #{id}</select>
+    <select id="latestVersion" resultType="TripPlanVersion">
+        SELECT * FROM trip_plan_version WHERE plan_id = #{planId} ORDER BY version_no DESC LIMIT 1
+    </select>
+</mapper>

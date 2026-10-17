@@ -1,0 +1,63 @@
+{
+  "city": "北京",
+  "cities": [
+    "北京"
+  ],
+  "start_date": "2026-11-01",
+  "end_date": "2026-11-01",
+  "days": [
+    {
+      "date": "2026-11-01",
+      "day_index": 0,
+      "city": "北京",
+      "is_transfer_day": false,
+      "transfer_info": "",
+      "description": "历史文化体验",
+      "transportation": "公共交通",
+      "accommodation": "当日返程",
+      "hotel": null,
+      "attractions": [
+        {
+          "name": "天坛",
+          "address": "北京",
+          "visit_duration": 120,
+          "description": "游览历史建筑",
+          "category": "历史文化",
+          "ticket_price": 30,
+          "reservation_required": true,
+          "reservation_tips": "出发前核实预约信息"
+        }
+      ],
+      "meals": [
+        {
+          "type": "breakfast",
+          "name": "早餐",
+          "description": "本地早餐",
+          "estimated_cost": 20
+        },
+        {
+          "type": "lunch",
+          "name": "午餐",
+          "description": "家常菜",
+          "estimated_cost": 40
+        },
+        {
+          "type": "dinner",
+          "name": "晚餐",
+          "description": "本地餐食",
+          "estimated_cost": 40
+        }
+      ]
+    }
+  ],
+  "weather_info": [],
+  "overall_suggestions": "费用为估算，请核实开放时间、预约和实际费用。",
+  "budget": {
+    "total_attractions": 30,
+    "total_hotels": 0,
+    "total_meals": 100,
+    "total_transportation": 20,
+    "total_inter_city_transport": 0,
+    "total": 150
+  }
+}

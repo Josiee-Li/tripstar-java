@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.josie.tripstar.mapper.ChatMapper">
+    <insert id="insertSession" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO chat_session(public_id, plan_version_id) VALUES(#{publicId}, #{planVersionId})
+    </insert>
+    <select id="findSession" resultType="ChatSession">
+        SELECT s.* FROM chat_session s JOIN trip_plan_version v ON v.id = s.plan_version_id
+        JOIN trip_plan p ON p.id = v.plan_id WHERE s.public_id = #{publicId} AND p.user_id = #{userId}
+    </select>
+    <select id="lockSession" resultType="ChatSession">SELECT * FROM chat_session WHERE id = #{id} FOR UPDATE</select>
+    <select id="recentMessages" resultType="ChatMessage">
+        SELECT * FROM chat_message WHERE session_id = #{sessionId} ORDER BY sequence_no DESC LIMIT #{limit}
+    </select>
+    <select id="messages" resultType="ChatMessage">
+        SELECT * FROM chat_message WHERE session_id = #{sessionId} AND sequence_no &gt; #{after}
+        ORDER BY sequence_no LIMIT #{limit}
+    </select>
+    <insert id="insertMessage" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO chat_message(session_id, sequence_no, role, content)
+        VALUES(#{sessionId}, #{sequenceNo}, #{role}, #{content})
+    </insert>
+    <update id="advance">
+        UPDATE chat_session SET next_sequence = next_sequence + 2 WHERE id = #{id} AND next_sequence = #{expected}
+    </update>
+</mapper>

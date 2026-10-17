@@ -1,0 +1,16 @@
+spring:
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:tripstar;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1;LOCK_TIMEOUT=5000
+    username: sa
+    password: ""
+    hikari:
+      connection-init-sql: SELECT 1
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema-h2.sql
+tripstar:
+  memory:
+    enabled: true
+    extract-enabled: false

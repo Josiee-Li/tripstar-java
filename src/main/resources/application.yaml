@@ -1,0 +1,35 @@
+# 应用服务 WEB 访问端口
+server:
+  port: 9060
+
+# mysql
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/tripstar?serverTimezone=GMT%2B8&useUnicode=true&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: ${DB_PASSWORD}
+
+  sql:
+    init:
+      # 使用已配置的数据库和已有表，应用启动时不自动执行建表脚本。
+      mode: never
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.josie.tripstar.entity
+  configuration:
+    map-underscore-to-camel-case: true
+
+tripstar:
+  ai:
+    base-url: ${LLM_BASE_URL:https://api.deepseek.com/v1}
+    api-key: ${LLM_API_KEY:}
+    model: ${LLM_MODEL_ID:deepseek-chat}
+    plan-max-tokens: ${LLM_PLAN_MAX_TOKENS:8192}
+    connect-timeout-ms: 10000
+    read-timeout-ms: 120000
+  memory:
+    enabled: ${ENABLE_USER_MEMORY:true}
+    # 自动提取需要额外调用模型，默认关闭；手动偏好与召回仍可使用。
+    extract-enabled: ${MEMORY_EXTRACT_ENABLED:false}

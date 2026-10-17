@@ -1,0 +1,93 @@
+@baseUrl = http://localhost:9060
+@userId = idea-demo-user
+
+### 1. 保存显式偏好
+POST {{baseUrl}}/api/memory
+X-User-Id: {{userId}}
+Content-Type: application/json
+
+{"content":"喜欢历史文化与博物馆"}
+
+### 2. 提交规划（执行后自动保存 taskId / planId）
+POST {{baseUrl}}/api/trip/plan
+X-User-Id: {{userId}}
+Content-Type: application/json
+
+{
+  "idempotency_key": "beijing-demo-001",
+  "city": "北京",
+  "start_date": "2026-11-01",
+  "end_date": "2026-11-03",
+  "travel_days": 3,
+  "transportation": "公共交通",
+  "accommodation": "经济型酒店",
+  "preferences": ["历史文化", "美食"],
+  "free_text_input": "不要太赶，最后一天返程",
+  "language": "zh"
+}
+
+> {%
+client.global.set("taskId", response.body.task_id);
+client.global.set("planId", response.body.plan_id);
+%}
+
+### 3. 查询任务；直到 status 为 completed 再创建聊天
+GET {{baseUrl}}/api/trip/status/{{taskId}}
+X-User-Id: {{userId}}
+
+### 4. 历史记录
+GET {{baseUrl}}/api/trip/history?limit=10
+X-User-Id: {{userId}}
+
+### 5. 读取第一版行程
+GET {{baseUrl}}/api/trip/plans/{{planId}}/versions/1
+X-User-Id: {{userId}}
+
+### 6. 创建绑定版本的聊天会话
+POST {{baseUrl}}/api/chat/sessions
+X-User-Id: {{userId}}
+Content-Type: application/json
+
+{"plan_id":"{{planId}}", "version_no":1}
+
+> {%
+client.global.set("sessionId", response.body.data.session_id);
+%}
+
+### 7. 行程问答
+POST {{baseUrl}}/api/chat/ask
+X-User-Id: {{userId}}
+Content-Type: application/json
+
+{"session_id":"{{sessionId}}", "message":"这份行程的预算大约是多少？有哪些需要提前预约？"}
+
+### 8. 聊天消息；后续将 after 换成已收到的最大 sequence_no
+GET {{baseUrl}}/api/chat/sessions/{{sessionId}}/messages?after=0&limit=50
+X-User-Id: {{userId}}
+
+### 9. 同一计划生成新版本；相同幂等键和相同内容再次执行会返回原任务
+POST {{baseUrl}}/api/trip/plan
+X-User-Id: {{userId}}
+Content-Type: application/json
+
+{
+  "plan_id": "{{planId}}",
+  "idempotency_key": "beijing-demo-002",
+  "city": "北京",
+  "start_date": "2026-11-01",
+  "end_date": "2026-11-03",
+  "travel_days": 3,
+  "transportation": "公共交通",
+  "accommodation": "经济型酒店",
+  "preferences": ["历史文化"],
+  "free_text_input": "减少步行距离",
+  "language": "zh"
+}
+
+### 10. 查询已完成的版本列表
+GET {{baseUrl}}/api/trip/plans/{{planId}}/versions
+X-User-Id: {{userId}}
+
+### 11. 查看召回偏好
+GET {{baseUrl}}/api/memory
+X-User-Id: {{userId}}

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.josie.tripstar.mapper.MemoryMapper">
+    <select id="list" resultType="UserMemory">
+        SELECT * FROM user_memory WHERE user_id = #{userId} ORDER BY id
+    </select>
+    <select id="byHash" resultType="UserMemory">
+        SELECT * FROM user_memory WHERE user_id = #{userId} AND content_hash = #{hash}
+    </select>
+    <insert id="insertIfAbsent">
+        INSERT INTO user_memory(public_id, user_id, content, content_hash, source, weight, last_decay_at, last_access_at)
+        VALUES(#{publicId}, #{userId}, #{content}, #{contentHash}, #{source}, #{weight}, #{lastDecayAt}, #{lastAccessAt})
+        ON DUPLICATE KEY UPDATE content_hash = content_hash
+    </insert>
+    <update id="update">
+        UPDATE user_memory SET weight = #{weight}, source = #{source}, last_decay_at = #{lastDecayAt},
+            last_access_at = #{lastAccessAt}, lock_version = lock_version + 1
+        WHERE id = #{id} AND user_id = #{userId} AND lock_version = #{lockVersion}
+    </update>
+</mapper>
